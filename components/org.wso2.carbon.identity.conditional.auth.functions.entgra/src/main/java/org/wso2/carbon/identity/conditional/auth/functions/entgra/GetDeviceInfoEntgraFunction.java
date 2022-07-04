@@ -19,6 +19,6 @@ public interface GetDeviceInfoEntgraFunction {
      * @param eventHandlers Event handlers
      * @throws EntgraConnectorException When unable to retrieve tenant configuration
      */
-    void getDeviceInfoEntgra(JsAuthenticationContext context, String osPlatform, String deviceID, Map<String, Object> eventHandlers)
+    void getDeviceInfoEntgra(JsAuthenticationContext context, String osPlatform, String deviceID, String integrityToken, Map<String, Object> eventHandlers)
             throws EntgraConnectorException;
 }

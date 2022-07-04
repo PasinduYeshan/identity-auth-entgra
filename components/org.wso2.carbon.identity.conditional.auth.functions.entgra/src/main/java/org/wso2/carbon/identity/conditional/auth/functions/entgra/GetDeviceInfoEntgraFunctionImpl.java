@@ -41,6 +41,21 @@ import static org.wso2.carbon.identity.conditional.auth.functions.common.utils.C
 import static org.wso2.carbon.identity.conditional.auth.functions.common.utils.Constants.OUTCOME_FAIL;
 import static org.wso2.carbon.identity.conditional.auth.functions.common.utils.Constants.OUTCOME_TIMEOUT;
 
+import com.google.api.services.playintegrity.v1.PlayIntegrity;
+import com.google.api.services.playintegrity.v1.PlayIntegrityRequestInitializer;
+import com.google.api.services.playintegrity.v1.model.DecodeIntegrityTokenRequest;
+import com.google.api.services.playintegrity.v1.model.DecodeIntegrityTokenResponse;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.auth.oauth2.GoogleCredentials;
+
+
+
 /**
  * Implementation of the {@link GetDeviceInfoEntgraFunction}
  */
@@ -50,6 +65,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
     private CloseableHttpClient client;
 
     public GetDeviceInfoEntgraFunctionImpl() {
+
         super();
         // Configure Http Client
         RequestConfig config = RequestConfig.custom()
@@ -64,7 +80,8 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
     }
 
     @Override
-    public void getDeviceInfoEntgra(JsAuthenticationContext context, String platformOS, String deviceID, Map<String, Object> eventHandlers) throws EntgraConnectorException {
+    public void getDeviceInfoEntgra(JsAuthenticationContext context, String platformOS, String deviceID, String integrityToken, Map<String, Object> eventHandlers) throws EntgraConnectorException {
+
         try {
             JsAuthenticatedUser user = Util.getUser(context);
             String tenantDomain = user.getWrapped().getTenantDomain();
@@ -75,12 +92,47 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
             String clientSecret = CommonUtils.getConnectorConfig(Constants.CLIENT_SECRET, tenantDomain);
             String tokenURL = CommonUtils.getConnectorConfig(Constants.TOKEN_URL, tenantDomain);
             String deviceInfoBaseURL = CommonUtils.getConnectorConfig(Constants.DEVICE_INFO_URL, tenantDomain);
+//            String integrityCheckEnabled = CommonUtils.getConnectorConfig(Constants.ANDROID_INTEGRITY_CHECK_ENABLE, tenantDomain) != "" ? CommonUtils.getConnectorConfig(Constants.ANDROID_INTEGRITY_CHECK_ENABLE, tenantDomain) : "true";
+            Boolean androidIntegrityCheckEnabled = true;
 
-            String deviceInfoURL = deviceInfoBaseURL + "/" + platformOS + "/" + deviceID;
 
             AsyncProcess asyncProcess = new AsyncProcess((authenticationContext, asyncReturn) -> {
+
                 String outcome;
                 JSONObject response = null;
+                String nonceDeviceID = "";
+                String deviceInfoURL = deviceInfoBaseURL + "/" + platformOS + "/" + deviceID;;
+
+                // Check application integrity
+                if ("android".equals(platformOS)) {
+
+                    if (androidIntegrityCheckEnabled) {
+
+                        Map<String, Object> result = IntegrityCheck.checkAndroidApplicationIntegrity(tenantDomain, integrityToken, LOG);
+                        Boolean isIntegrityCheckPassed = (Boolean) result.get("isIntegrityCheckPassed");
+                        if (!isIntegrityCheckPassed) {
+
+                            outcome = OUTCOME_FAIL;
+                            asyncReturn.accept(authenticationContext, response != null ? response : Collections.emptyMap(), outcome);
+                            return;
+                        } else {
+
+                            nonceDeviceID = (String) result.get("deviceID");
+                            // Check if the device id sent along with the auth request is equals to nonce's device id.
+                            if (!nonceDeviceID.equals(deviceID)) {
+
+                                outcome = OUTCOME_FAIL;
+                                asyncReturn.accept(authenticationContext, response != null ? response : Collections.emptyMap(), outcome);
+                            }
+
+                        }
+
+                    }
+                } else if ("ios".equals(platformOS)) {
+
+                    // Implementation of iOS integrity check
+                }
+
 
                 try {
                     HttpPost tokenRequest = getTokenRequest(tokenURL, clientKey, clientSecret);
@@ -111,13 +163,13 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
                                     // Check if the device is enrolled to current user
                                     if ("REMOVED".equals(enrollmentStatus)) {
                                         outcome = OUTCOME_FAIL;
-                                        response = getErrorJsonObject(Constants.AuthResponseErrorCode.DEVICE_NOT_ENROLLED, "Device is not recognized. Please register your device.");
+                                        response = Util.getErrorJsonObject(Constants.AuthResponseErrorCode.DEVICE_NOT_ENROLLED, "Device is not recognized. Please register your device.");
                                     } else if (username.equalsIgnoreCase(enrolledUser)) {
                                         outcome = OUTCOME_SUCCESS;
                                         response = (JSONObject) ((JSONObject) jsonDeviceInfoResponse.get("deviceInfo")).get("deviceDetailsMap");
                                     } else {
                                         outcome = OUTCOME_FAIL;
-                                        response = getErrorJsonObject(Constants.AuthResponseErrorCode.DEVICE_NOT_ENROLLED_UNDER_CURRENT_USER, "Access is denied. Please contact your administrator.");
+                                        response = Util.getErrorJsonObject(Constants.AuthResponseErrorCode.DEVICE_NOT_ENROLLED_UNDER_CURRENT_USER, "Access is denied. Please contact your administrator.");
                                     }
                                 } else {
 
@@ -132,7 +184,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
                         } else if (tokenResponseCode == 404) {
                             LOG.error("Error while requesting access token from Entgra Server. Response code: " + tokenResponseCode);
                             outcome = OUTCOME_FAIL;
-                            response = getErrorJsonObject(Constants.AuthResponseErrorCode.DEVICE_NOT_ENROLLED, "Device is not recognized. Please register your device.");
+                            response = Util.getErrorJsonObject(Constants.AuthResponseErrorCode.DEVICE_NOT_ENROLLED, "Device is not recognized. Please register your device.");
 
                         } else {
                             LOG.error("Error while requesting access token from Entgra Server. Response code: " + tokenResponseCode);
@@ -161,7 +213,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
 
                 // If outcome fails and response is null, set error object as response
                 if (outcome.equals(OUTCOME_FAIL) && response == null) {
-                    response = getErrorJsonObject(Constants.AuthResponseErrorCode.ACCESS_DENIED, "Access is denied. Please contact your administrator.");
+                    response = Util.getErrorJsonObject(Constants.AuthResponseErrorCode.ACCESS_DENIED, "Access is denied. Please contact your administrator.");
                 }
 
                 asyncReturn.accept(authenticationContext, response != null ? response : Collections.emptyMap(), outcome);
@@ -183,6 +235,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
      * @return HttpPost request
      */
     private HttpPost getTokenRequest(String tokenURL, String clientKey, String clientSecret) {
+
         HttpPost request = new HttpPost(tokenURL);
 
         // Creating basic authorization header value
@@ -210,6 +263,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
      * @return HttpGet request
      */
     private HttpGet getDeviceInfoRequest(String deviceInfoURL, String accessToken) {
+
         HttpGet request = new HttpGet(deviceInfoURL);
 
         request.setHeader(ACCEPT, Constants.TYPE_APPLICATION_JSON);
@@ -218,17 +272,6 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
         return request;
     }
 
-    /**
-     * Return Error Json Object
-     * @param errorCode
-     * @param errorMessage
-     * @return errorMap JSONObject
-     */
-    private JSONObject getErrorJsonObject(Constants.AuthResponseErrorCode errorCode, String errorMessage) {
-        JSONObject errorMap = new JSONObject();
-        errorMap.put("errorCode", errorCode);
-        errorMap.put("errorMessage", errorMessage);
-        return errorMap;
-    }
+
 
 }
