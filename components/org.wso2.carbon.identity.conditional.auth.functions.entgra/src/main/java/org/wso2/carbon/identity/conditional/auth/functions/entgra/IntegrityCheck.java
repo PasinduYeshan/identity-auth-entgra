@@ -31,6 +31,15 @@ import org.wso2.carbon.identity.conditional.auth.functions.entgra.exception.Entg
 
 public abstract class IntegrityCheck {
 
+    /**
+     * Check Android application's integrity by the integrity token and return a Map
+     * @param tenantDomain      Current logged in user's tenant domain
+     * @param integrityToken    Integrity token received from the mobile application
+     * @param LOG               Logger
+     * @return output           Map<String, Object>
+     *     isIntegrityCheckPassed   Boolean
+     *     deviceID                 String
+     */
     public static Map<String, Object> checkAndroidApplicationIntegrity(String tenantDomain, String integrityToken, Log LOG) {
 
         Boolean isIntegrityCheckPassed = true;
@@ -90,28 +99,25 @@ public abstract class IntegrityCheck {
                 String integrityTokenPackageName = integrityTokenResponse.getTokenPayloadExternal().getAppIntegrity().getPackageName();
                 List deviceRecognitionVerdict = integrityTokenResponse.getTokenPayloadExternal().getDeviceIntegrity().getDeviceRecognitionVerdict();
 
-                if (Constants.AppRecognitionVerdict.UNRECOGNIZED_VERSION.equals(appRecognitionVerdict)) {
+                if (!integrityTokenPackageName.equalsIgnoreCase(packageName)) {
+                    isIntegrityCheckPassed = false;
+                } else if (Constants.AppRecognitionVerdict.UNRECOGNIZED_VERSION.equals(appRecognitionVerdict)) {
                     isIntegrityCheckPassed = false;
                 } else if (Constants.AppRecognitionVerdict.UNEVALUATED.equals(appRecognitionVerdict)) {
                     isIntegrityCheckPassed = false;
-                }
-
-                if (Constants.LicensingVerdict.UNLICENSED.equals(licensingVerdict)) {
+                } else if (Constants.LicensingVerdict.UNLICENSED.equals(licensingVerdict)) {
                     isIntegrityCheckPassed = false;
+                } else {
+                    // Decode nonce and get device identifier and unique value
+                    Base64.Decoder decoder = Base64.getUrlDecoder();
+                    String decodedNonce = new String(decoder.decode(nonce));
+                    JSONParser parser = new JSONParser();
+                    JSONObject jsonNonce = (JSONObject) parser.parse(decodedNonce);
+
+                    String deviceID = (String) jsonNonce.get("deviceID");
+                    String uniqueValue = (String) jsonNonce.get("uniqueValue");
+                    output.put("deviceID", deviceID);
                 }
-
-                // Decode nonce and get device identifier and unique value
-                Base64.Decoder decoder = Base64.getUrlDecoder();
-                String decodedNonce = new String(decoder.decode(nonce));
-                JSONParser parser = new JSONParser();
-                JSONObject jsonNonce = (JSONObject) parser.parse(decodedNonce);
-
-                String deviceID = (String) jsonNonce.get("deviceID");
-                String uniqueValue = (String) jsonNonce.get("uniqueValue");
-                LOG.info(decodedNonce);
-                output.put("deviceID", deviceID);
-
-
             } catch (Error | IOException e) {
                 LOG.error(e);
                 isIntegrityCheckPassed = false;
@@ -129,9 +135,30 @@ public abstract class IntegrityCheck {
             return output;
         }
 
+    }
 
+    /**
+     * Check iOS application's integrity by the integrity token and return a Map
+     * @param tenantDomain      Current logged in user's tenant domain
+     * @param attestation       Attestation received from the mobile application
+     * @param LOG               Logger
+     * @return output           Map<String, Object>
+     *     isIntegrityCheckPassed   Boolean
+     *     deviceID                 String
+     */
+    public static Map<String, Object> checkIOSApplicationIntegrity(String tenantDomain, String attestation, Log LOG) {
 
+        Boolean isIntegrityCheckPassed = true;
+        Map<String, Object> output = new HashMap<String, Object>();
+        try {
+            // Implement iOS application integrity check
 
+        } catch (Exception e) {
+            LOG.error(e);
+        } finally {
+            output.put("isIntegrityCheckPassed", isIntegrityCheckPassed);
+            return output;
+        }
 
     }
 }

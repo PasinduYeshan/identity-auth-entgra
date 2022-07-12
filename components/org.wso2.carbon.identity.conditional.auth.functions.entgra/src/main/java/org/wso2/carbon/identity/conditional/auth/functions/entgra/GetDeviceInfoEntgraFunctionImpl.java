@@ -41,21 +41,6 @@ import static org.wso2.carbon.identity.conditional.auth.functions.common.utils.C
 import static org.wso2.carbon.identity.conditional.auth.functions.common.utils.Constants.OUTCOME_FAIL;
 import static org.wso2.carbon.identity.conditional.auth.functions.common.utils.Constants.OUTCOME_TIMEOUT;
 
-import com.google.api.services.playintegrity.v1.PlayIntegrity;
-import com.google.api.services.playintegrity.v1.PlayIntegrityRequestInitializer;
-import com.google.api.services.playintegrity.v1.model.DecodeIntegrityTokenRequest;
-import com.google.api.services.playintegrity.v1.model.DecodeIntegrityTokenResponse;
-import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.gson.GsonFactory;
-import com.google.auth.oauth2.GoogleCredentials;
-
-
-
 /**
  * Implementation of the {@link GetDeviceInfoEntgraFunction}
  */
@@ -92,8 +77,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
             String clientSecret = CommonUtils.getConnectorConfig(Constants.CLIENT_SECRET, tenantDomain);
             String tokenURL = CommonUtils.getConnectorConfig(Constants.TOKEN_URL, tenantDomain);
             String deviceInfoBaseURL = CommonUtils.getConnectorConfig(Constants.DEVICE_INFO_URL, tenantDomain);
-//            String integrityCheckEnabled = CommonUtils.getConnectorConfig(Constants.ANDROID_INTEGRITY_CHECK_ENABLE, tenantDomain) != "" ? CommonUtils.getConnectorConfig(Constants.ANDROID_INTEGRITY_CHECK_ENABLE, tenantDomain) : "true";
-            Boolean androidIntegrityCheckEnabled = true;
+            String androidIntegrityCheckEnabled = CommonUtils.getConnectorConfig(Constants.ANDROID_INTEGRITY_CHECK_ENABLE, tenantDomain) != "" ? CommonUtils.getConnectorConfig(Constants.ANDROID_INTEGRITY_CHECK_ENABLE, tenantDomain) : "true";
 
 
             AsyncProcess asyncProcess = new AsyncProcess((authenticationContext, asyncReturn) -> {
@@ -106,7 +90,7 @@ public class GetDeviceInfoEntgraFunctionImpl implements GetDeviceInfoEntgraFunct
                 // Check application integrity
                 if ("android".equals(platformOS)) {
 
-                    if (androidIntegrityCheckEnabled) {
+                    if (androidIntegrityCheckEnabled.equalsIgnoreCase("true")) {
 
                         Map<String, Object> result = IntegrityCheck.checkAndroidApplicationIntegrity(tenantDomain, integrityToken, LOG);
                         Boolean isIntegrityCheckPassed = (Boolean) result.get("isIntegrityCheckPassed");
