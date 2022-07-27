@@ -18,9 +18,7 @@
   ~ under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -31,7 +29,7 @@
 
     <groupId>org.wso2.carbon.identity.conditional.auth.entgra</groupId>
     <artifactId>identity-conditional-auth-entgra</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>\</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -170,4 +168,8 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
     </properties>
+
+  <scm>
+    <tag>identity-conditional-auth-entgra-\</tag>
+  </scm>
 </project>
