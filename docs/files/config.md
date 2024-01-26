@@ -47,12 +47,11 @@ valid URL format ending with `/sdk/secure` for **Callback Url** section. </br></
 1. If you haven’t downloaded WSO2 Identity server yet, please visit [https://wso2.com/identity-server/](https://wso2.
    com/identity-server/) and download the latest version of the Identity Server. </br></br>
 
-2. Go to [https://github.com/PasinduYeshan/identity-auth-entgra](https://github.
-   com/PasinduYeshan/identity-auth-entgra) and follow exact steps to add Entgra connector and conditional 
+2. Go to https://github.com/PasinduYeshan/identity-auth-entgra and follow exact steps to add Entgra connector and conditional 
    authentication function to WSO2 Identity Server. </br></br> 
 
-3. Start the WSO2 Identity server.  Login to WSO2 IS management console from [http://localhost:9443/carbon]
-(http://localhost:9443/carbon)/ and navigate to **Service Providers** tab listed under the Identity section. </br></br>
+3. Start the WSO2 Identity server.  Login to WSO2 IS management console from
+http://localhost:9443/carbon and navigate to **Service Providers** tab listed under the Identity section. </br></br>
 
 4. Click Add to add a new service provider. </br></br>
 
